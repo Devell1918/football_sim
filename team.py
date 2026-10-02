@@ -7,9 +7,9 @@ class Team:
         self.pass_completion_percent = pass_completion_percent
         self.name = name
 
-        self.current_possesion = None
+        self.current_possession = None
 
     def start_possession(self, yardline):
-        possesion = Possession(self, yardline)
-        self._current_possesion = possesion
+        possession = Possession(self, yardline)
+        self.current_possession = possession
 

@@ -7,9 +7,9 @@ class Possession:
 
     def __init__(self, team, starting_yardline: int, game_clock: int = 0):
         """
-        simulates a possesion
+        simulates a possession
 
-        :param starting_yardline: start of possesion
+        :param starting_yardline: start of possession
         :param game_clock: in minutes
         """
         self._starting_yardline = starting_yardline
@@ -31,7 +31,7 @@ class Possession:
         self._field_goal = False
         self._punt = False
         self._turnover = False
-        self._end_possesion = False
+        self._end_possession = False
 
         self._result = ""
 
@@ -39,6 +39,8 @@ class Possession:
         self.MEDIUM_RUN_MAX = 20
         self.SHORT_RUN_MAX = 8
         self.LOSS_MAX = -4
+
+        self.print_play = False
 
         #print(f'{team.name} ball on the {starting_yardline}')
 
@@ -48,7 +50,9 @@ class Possession:
             self._yards_to_first = self._yards_to_td
 
     def choose_play_type(self):
-    
+        """
+        this function chooses a play type based on the possession variables such as yards to first down
+        """
         rand_float = self.get_rand_float()
         match (self._down):
             case 1:
@@ -107,6 +111,12 @@ class Possession:
         yards_gained = 0
 
         yards_to_goal = 100 - self._yardline
+
+        #check for a turnover
+        if self.check_run_turnover():
+            return None
+        
+        #TODO refactor, right now everything is based on big_run_chance. Even turnovers
         if  yards_to_goal <= 20:
             min_big_run = yards_to_goal
         else:
@@ -127,31 +137,55 @@ class Possession:
         pass_comp_percent = self._team.pass_completion_percent
         pass_attempt = self.get_rand_float()
 
-        #caught
+        #check if caught
         if pass_attempt < pass_comp_percent:
+            if self.check_pass_turnover():
+                return None
             return 8
         else:
             return 0
+
+            
 
         
 
 # region Results
     def punt(self):
         self._punt = True
-        self.end_possesion("punt")
+        self.end_possession("punt")
 
     def touchdown(self):
-
         self._touchdown = True
-        #print(f"Total Plays: {self._total_plays}")
-        #print(f'Total Yards Gained: {self._total_yards_gained}')
-        self.end_possesion("touchdown")
+        self.end_possession("touchdown")
+
+    def turnover(self):
+        self._turnover = True
+        self.end_possession("turnover")
 
     def attempt_field_goal(self):
         self._field_goal = True
-        self.end_possesion("field goal")
+        self.end_possession("field goal")
 # endregion
 
+# region turnovers
+
+    def check_run_turnover(self):
+        fumble_chance = 0.02
+        fumble_gen = self.get_rand_float()
+        if fumble_chance > fumble_gen:
+            print('Fumble!!!!!!!')
+            return True
+        return False
+    def check_pass_turnover(self):
+        interception_chance = 0.02
+        interception_gen = self.get_rand_float()
+        if interception_chance > interception_gen:
+            print('Interception!!!!')
+            return True
+        return False
+
+# endregion
+    
     def get_rand_float(self):
         return random.random()
     
@@ -163,16 +197,26 @@ class Possession:
         match (play_type):
             case "run":
                 yards_gained = self.sim_run()
+
             case "pass":
                 yards_gained = self.sim_pass()
             case "feild_goal":
                 self.attempt_field_goal()
+                yards_gained = 0
             case "punt":
                 self.punt()
+                yards_gained = 0
 
+        if self.print_play:
+            print(f'---------------Play Results------------------')
+            print(f'Play Type: {play_type}')
 
+        # check for a turnover
+        if yards_gained == None:
+            self.turnover()
+            return
         #check for first down
-        if yards_gained > self._yards_to_first:
+        if yards_gained >= self._yards_to_first:
             self._down = 1
             if self._starting_yardline > 90:
                 self._yards_to_first = 100 - self._yardline
@@ -183,8 +227,6 @@ class Possession:
             self._yards_to_first -= yards_gained
 
         #update feild pos
-
-        
         self._yardline += yards_gained
         self._total_yards_gained += yards_gained
         self.set_yards_to_td()
@@ -192,34 +234,50 @@ class Possession:
         #adjust total yards if over
         if self._total_yards_gained > (100 - self._starting_yardline):
             self._total_yards_gained = (100 - self._starting_yardline)
-        #check TD
 
+
+
+        #check TD
         if self._yardline >= 100:
+            yards_gained = abs(self._yards_to_td)
+            if self.print_play:
+                print(f'Yards Gained: {yards_gained}')
             self.touchdown()
 
         if self._touchdown or self._field_goal or self._punt:
             pass
         else:
-            pass
-            # print(f'---------------Play Results------------------')
-            # print(f'Play Type: {play_type}')
-            # print(f'Yards Gained: {yards_gained}')
-            # print(f'Yards to First: {self._yards_to_first}')
-            # print(f'Down: {self._down}')
-            # print(f'Yard Line: {self._yardline}')
+            if(self.print_play):
 
-    def end_possesion(self, result: str):
-        self._end_possesion = True
+                print(f'Yards Gained: {yards_gained}')
+                print(f'------')
+                print(f'Yards to First: {self._yards_to_first}')
+                print(f'Down: {self._down}')
+                print(f'Yard Line: {self._yardline}')
+
+        if self._end_possession and self.print_play:
+            print(self._result)
+            print("-----------------------------End of Possession---------------------------")
+
+    def end_possession(self, result: str):
+        """
+        Ends Possession
+
+        :param result:  result of possession
+        """
+        self._end_possession = True
         self._result = result
-        #print("-----------------------------End of Possesion---------------------------")
 
 
-    def sim_possesion(self) -> str:
+
+    def sim_possession(self) -> str:
         """
-        simulates possesion after one has been created
+        simulates possession after one has been created
         """
+        if self.print_play:
+            print("----------Start Possession----------")
 
-        while self._end_possesion != True:
+        while self._end_possession != True:
             self.sim_play()
             #print(f'Total Plays: {self._total_plays}')
         return self._result
