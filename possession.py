@@ -40,7 +40,7 @@ class Possession:
         self.SHORT_RUN_MAX = 8
         self.LOSS_MAX = -4
 
-        self.print_play = False
+        self.print_play = True
 
         #print(f'{team.name} ball on the {starting_yardline}')
 
